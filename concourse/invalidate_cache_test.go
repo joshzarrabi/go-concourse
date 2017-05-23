@@ -3,9 +3,6 @@ package concourse_test
 import (
 	"net/http"
 
-	"github.com/concourse/atc"
-	"github.com/concourse/go-concourse/concourse"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -19,7 +16,7 @@ var _ = Describe("InvalidateCache", func() {
 			atcServer.AppendHandlers(
 				ghttp.CombineHandlers(
 					ghttp.VerifyRequest("DELETE", expectedURL),
-					ghttp.RespondWithJSONEncoded(http.StatusOK, ""),
+					ghttp.RespondWithJSONEncoded(http.StatusOK, nil),
 				),
 			)
 		})
@@ -39,7 +36,7 @@ var _ = Describe("InvalidateCache", func() {
 			atcServer.AppendHandlers(
 				ghttp.CombineHandlers(
 					ghttp.VerifyRequest("DELETE", expectedURL),
-					ghttp.RespondWithJSONEncoded(http.StatusNotFound, ""),
+					ghttp.RespondWithJSONEncoded(http.StatusNotFound, nil),
 				),
 			)
 		})
@@ -55,26 +52,18 @@ var _ = Describe("InvalidateCache", func() {
 		BeforeEach(func() {
 			expectedURL := "/api/v1/teams/some-team/pipelines/mypipeline/resources/myresource"
 
-			atcResponse := atc.CheckResponseBody{
-				ExitStatus: 1,
-				Stderr:     "some-error",
-			}
-
 			atcServer.AppendHandlers(
 				ghttp.CombineHandlers(
 					ghttp.VerifyRequest("DELETE", expectedURL),
-					ghttp.RespondWithJSONEncoded(http.StatusBadRequest, atcResponse),
+					ghttp.RespondWithJSONEncoded(http.StatusInternalServerError, nil),
 				),
 			)
 		})
 
 		It("returns an error", func() {
-			_, err := team.InvalidateCache("mypipeline", "myresource")
+			found, err := team.InvalidateCache("mypipeline", "myresource")
 			Expect(err).To(HaveOccurred())
-
-			cre, ok := err.(concourse.CheckResourceError)
-			Expect(ok).To(BeTrue())
-			Expect(cre.Error()).To(Equal("check failed with exit status '1':\nsome-error\n"))
+			Expect(found).To(BeFalse())
 		})
 	})
 })
